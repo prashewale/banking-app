@@ -3,6 +3,8 @@ import {
   SavingBankAccount,
 } from "./service/models/bank-account.js";
 
+import { bankAccounts } from "./lib/data/bank-accounts-data.js";
+
 import readline from "readline-sync";
 
 import { bankingAccoutType } from "./lib/utils.js";
@@ -10,6 +12,35 @@ import { bankingAccoutType } from "./lib/utils.js";
 console.log("**************** Welcome to Banking App ****************");
 
 const accounts = [];
+
+for (const account of bankAccounts) {
+  let bankAccount = null;
+
+  switch (account.type) {
+    case "current":
+      bankAccount = CurrentBankAccount.createInstance(
+        account.id,
+        account.name,
+        account.balance
+      );
+      break;
+
+    case "saving":
+      bankAccount = SavingBankAccount.createInstance(
+        account.id,
+        account.name,
+        account.balance
+      );
+      break;
+
+    default:
+      break;
+  }
+
+  if (bankAccount) {
+    accounts.push(bankAccount);
+  }
+}
 
 const getUniqueId = () => {
   // check in accounts if id already exists
@@ -43,10 +74,19 @@ const createAccount = () => {
   try {
     switch (accountType) {
       case "current":
-        bankAccount = new CurrentBankAccount(accountId, name, balance);
+        bankAccount = CurrentBankAccount.createInstance(
+          accountId,
+          name,
+          balance
+        );
         break;
+
       case "saving":
-        bankAccount = new SavingBankAccount(accountId, name, balance);
+        bankAccount = SavingBankAccount.createInstance(
+          accountId,
+          name,
+          balance
+        );
         break;
     }
 
@@ -90,10 +130,59 @@ const deposit = () => {
 
 const withdraw = () => {
   console.log("Withdraw...");
+  const accountId = readline.questionInt("Enter account id: ");
+
+  const account = accounts.find((account) => account.getId() === accountId);
+  if (!account) {
+    console.log("Account not found...");
+    return;
+  }
+
+  const amount = readline.questionFloat("Enter amount you want to withdraw: ");
+  try {
+    account.withdrawAmount(amount);
+  } catch (err) {
+    console.log(err.message);
+    return;
+  }
+
+  console.log("Amount withdrawn successfully...");
+  account.printStats();
 };
 
 const transfer = () => {
   console.log("Transfer...");
+  const fromAccountId = readline.questionInt("Enter from account id: ");
+  const fromAccount = accounts.find(
+    (account) => account.getId() === fromAccountId
+  );
+  if (!fromAccount) {
+    console.log("Account not found...");
+    return;
+  }
+
+  const toAccountId = readline.questionInt("Enter to account id: ");
+  const toAccount = accounts.find((account) => account.getId() === toAccountId);
+  if (!toAccount) {
+    console.log("Account not found...");
+    return;
+  }
+
+  const amount = readline.questionFloat("Enter amount you want to transfer: ");
+  try {
+    // withdraw the amount from fromAccount
+    fromAccount.withdrawAmount(amount);
+
+    // deposit the amount in toAccount
+    toAccount.depositAmount(amount);
+  } catch (err) {
+    console.log(err.message);
+    return;
+  }
+
+  console.log("Amount transferred successfully...");
+  fromAccount.printStats();
+  toAccount.printStats();
 };
 
 const checkBalance = () => {
@@ -107,6 +196,7 @@ const closeAccount = () => {
 let choice = 0;
 
 do {
+  console.log("\n**************** Banking App ****************");
   console.log("1. Create Account");
   console.log("2. Deposit");
   console.log("3. Withdraw");
@@ -115,6 +205,7 @@ do {
   console.log("6. Close Account");
   console.log("7. Print All Accounts");
   console.log("8. Exit");
+  console.log("\n");
 
   choice = readline.questionInt("Select an option (1-7): ");
 
@@ -140,14 +231,14 @@ do {
       break;
 
     case 7:
-      console.log("Printing all accounts...");
+      console.log("\nPrinting all accounts...");
       for (let i = 0; i < accounts.length; i++) {
         const account = accounts[i];
         account.printStats();
       }
       break;
     case 8:
-      console.log("Thanks for using Banking App");
+      console.log("\nThanks for using Banking App");
       break;
 
     default:

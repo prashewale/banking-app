@@ -4,6 +4,8 @@ export class BankAccount {
   #balance = 0;
   #name = "";
   #id = 0;
+  #isActive = true;
+
   constructor(id, name, balance, type) {
     this.setName(name);
     this.depositAmount(balance);
@@ -40,7 +42,9 @@ export class BankAccount {
     this.#balance += amount;
   }
 
-  withdrowAmount(amount) {
+  withdrawAmountValidate(amount, balance) {}
+
+  withdrawAmount(amount) {
     if (amount < 0) {
       throw new Error("Amount cannot be negative");
     }
@@ -48,6 +52,8 @@ export class BankAccount {
     if (this.#balance < amount) {
       throw new Error("Insufficient balance");
     }
+
+    this.withdrawAmountValidate(amount, this.#balance);
 
     this.#balance -= amount;
   }
@@ -81,15 +87,39 @@ export class BankAccount {
 }
 
 export class SavingBankAccount extends BankAccount {
-  #minBalance = 0;
+  static #minOpeningBalance = 1000;
   constructor(id, name, balance) {
     super(id, name, balance, "saving");
+  }
+
+  static getAccountType() {
+    return "saving";
+  }
+
+  static createInstance(id, name, balance) {
+    if (balance < this.#minOpeningBalance) {
+      throw new Error("Balance cannot be less than 1000");
+    }
+    return new SavingBankAccount(id, name, balance);
   }
 
   generateStatsMessage() {
     const statsMessage = super.generateStatsMessage();
 
-    return `${statsMessage}, Minimum Balance: ${this.#minBalance}`;
+    return `${statsMessage}, Minimum Balance: ${
+      SavingBankAccount.#minOpeningBalance
+    }`;
+  }
+
+  withdrawAmountValidate(amount, balance) {
+    const balanceAfterWithdraw = balance - amount;
+    if (balanceAfterWithdraw < SavingBankAccount.#minOpeningBalance) {
+      throw new Error(
+        `Insufficient balance to withdraw need to maintain minimum balance of ${
+          SavingBankAccount.#minOpeningBalance
+        }`
+      );
+    }
   }
 }
 
@@ -102,5 +132,9 @@ export class CurrentBankAccount extends BankAccount {
     const statsMessage = super.generateStatsMessage();
 
     return `${statsMessage}, Overdraft Limit: ${this.#overdraftLimit}`;
+  }
+
+  static createInstance(id, name, balance) {
+    return new CurrentBankAccount(id, name, balance);
   }
 }
